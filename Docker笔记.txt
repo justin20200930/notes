@@ -1,0 +1,129 @@
+Docker:
+   1.Docker组成：镜像，容器，仓库
+   2.镜像技术：从系统环境开始，自底至上打包应用，以跨平台运作
+   3.容器(container)是用镜像(image)创建的运行实例，容器可以看做简易版Linux
+ 
+   docker 配置文件地址 /etc/sysconfig/docker
+   阿里云账号：一只会飞_鱼；密码：aliyun202011
+   
+   命令：
+      echo+""                              把字符串输出
+   1. service start docker
+   2. docker images                        本地已有的镜像
+   3. docker images -qa                    本地已有的镜像ID列表(-q代表显示ID, -a代表显示列表)
+   4. docker search 镜像名                 在仓库搜索，而非在本地搜索
+   5. docker search -s 数字A 镜像名        (只显示STARS超过数字A的列表)
+   6. docker pull 镜像名                   (默认最新版)
+      docker pull tomcat:8.5.59            (格式是软件名：版本号)
+   7. docker rmi -f 镜像名                 (删除，默认最新版; -f代表强制删除)
+   8. docker rmi -f 镜像名A 镜像名B
+   9. docker run -it 镜像名                (创建运行并进入容器)
+   10. docker ps                           (列出当前正在运行的容器)
+       docker ps -n 数字A                   列出最近运行过的A个容器(包括现在已停止的)
+   11. exit                                 容器停止，退出
+   12. ctrl+P+Q                             容器不停止，退出
+       ctrl+C                               容器停止，退出
+   13. docker attach 容器ID                 进入正运行的容器(这个命令不好用，敲两次回车才能进centos,tomcat进不去)
+   14. docker start 容器ID
+   15. docker stop 容器ID
+   16. docker rm 容器ID                           删除容器(已停止)
+       docker rm -f $(docker ps -a -q)            强制删除所有容器
+	   docker rm -f $(docker ps -q)               强制删除所有运行的容器
+   17. docker run -d 镜像名                       创建并后台运行容器
+   18. docker logs -f -t --tail 数字A 容器ID     (显示日志, -tail代表倒数, -f代表跟随最新日志打印, -t代表日志加入时间戳)
+   19. docker top 容器ID                          查看容器内运行的进程
+   20. docker inspect 容器ID                      查看容器内部细节
+   
+   /bin/bash 是默认在命令末尾的，可写可不写
+   1. docker exec -t 容器ID 执行                      容器外，控制容器内执行，显示结果(会进入根目录执行逻辑)
+   2. docker exec -t 容器ID ls -l                     显示容器根目录下的内容
+   3. docker exec -t 容器ID ls -l 目录名/   
+   4. docker exec -t 容器ID cp...                     容器内复制 
+   5. docker cp 容器ID:文件地址 主机放文件目录        复制容器内的文件到主机
+   
+   6. docker run -it -p 端口：端口 镜像名             p 小写，指定端口，创建容器
+   7. docker run -it -p 端口：端口 镜像名：版本号      
+   8. docker run -it -P 镜像名                        p 大写，随机分配端口
+   9. docker run -d -p 端口：端口 镜像名              创建容器，后台启动 
+     
+   1. ll并不是linux下一个基本的命令，它实际上是ls -l的一个别名，docker不支持ll，只能用ls -l
+   2. vim docker也不支持，需用vi
+   
+   1. docker commit -a "作者" -m "描述" 容器ID 镜像名:版本号            生成并提交镜像到本地
+   
+   容器数据卷，用于数据持久化（数据保存进主机），可以实现主机与容器之间的数据共享
+   当容器关闭时，主机修改共享文件数据，待容器开启还是能查收到修改
+   2. docker run -it -v 主机目录:容器目录 镜像名                        生成容器的同时，在主机/容器上各创建一个文件夹，两者绑定
+   3. docker run -it -v 主机目录:容器目录：ro 镜像名                    在上述情况下，容器目录的文件只读 
+   
+   Dockerfile 
+      面向开发，是镜像的构建文件（类似于java代码的.class文件），能在已有镜像基础上增强，重新生成新的自定义镜像
+   1. 流程：写Dockerfile文件, docker build, docker run 
+      docker build -f Dockerfile的路径 -t 镜像名：版本号 .                 在主机生成镜像文件
+	  如当前已经在Dockerfile所在目录，命令可省略-f     docker build -t 镜像名：版本号 .   
+   
+   2. 命令(大写)
+      1. FROM                  基于哪个镜像(scratch是顶层父镜像)，即在哪个镜像上增强
+	  2. MAINTAINER            维护人员信息
+	  3. RUN                   执行命令
+	  4. EXPOSE                暴露端口	  
+	  5. WORKDIR               创建容器后，默认进入的目录，即落脚点
+	  6. ENV                   设置的环境变量 k,v键值对形式             
+	  7. ADD                   把主机当前目录的压缩文件拷贝到容器目录下，并解压缩
+	  8. COPY                  把主机当前目录的文件拷贝到容器目录下
+	  9. VOLUME                容器数据卷，与-v 对应（这里指定的是容器中共享数据文件夹路径，主机中共享数据有默认地址）
+	  10.CMD                   容器启动时运行的命令;1.当有多个CMD，只有最后一个生效;
+	                                                2.CMD会被docker run后的命令/参数覆盖
+	  11.ENTRYPOINT            容器启动时运行的命令;1.docker run后有命令/参数时，产生追加效果
+	  12.ONBUILD               当继承它的镜像创建容器并运行时，触发的命令 (Dockerfile文件FROM 来确定谁是它的子镜像)
+	  
+	  写Dockerfile文件时，如RUN 接以下安装命令，则可以使vim、ifcnfig、curl在docker中被支持使用
+	  使vim命令被支持，需yum -y install vim
+      使ifcnfig命令被支持，需yum -y install net-tools   
+      使curl命令被支持，需yum -y install curl
+	  
+   3.  先启动容器名1（父容器），再通过如下启动容器名2（子容器）
+       docker run -it --name 容器名2 --volumes-from 容器名1 镜像名       创建一个容器2继承于容器1，都由一个镜像生成
+       容器继承后，父容器与所有子容器共享数据(子容器与子容器也共享)，与java的继承有所区别
+       当父容器删除时，子容器间的共享不影响
+	   
+   4. pull Mysql
+	   1. 拉取image
+	   2. 运行
+	      docker run -p 3306:3306 --name myaql 
+		  -v /yuse/mysql/conf:/etc/mysql/conf.d 
+		  -v /yuse/mysql/logs:/logs 
+		  -v /yuse/mysql/data:/var/lib/mysql 
+		  -e MYSQL_ROOT_PASSWORD=root 
+		  -d mysql:5.6
+	   3. 登录
+          mysql -uroot -p
+		  
+   5. push 本地镜像到阿里云 
+	   1. 阿里云 创建镜像仓库
+	   2. 镜像推送
+	      点击“管理” ，使用已提供的推送代码
+	      docker login --username=一只会飞_鱼 registry.cn-hangzhou.aliyuncs.com
+          docker tag [ImageId] registry.cn-hangzhou.aliyuncs.com/yutest-1/mytest:[镜像版本号]
+          docker push registry.cn-hangzhou.aliyuncs.com/yutest-1/mytest:[镜像版本号]
+	   
+	      
+	    
+		  
+	
+
+
+
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
