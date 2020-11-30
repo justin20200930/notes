@@ -1,0 +1,39 @@
+Nginx
+1. 是HTTP和反向代理Web服务器
+2. 反向代理
+   请求发给反向代理服务器，由它选择目标服务器，获取数据后返回客户端; 此时反向代理服务器与目标服务器对外就是一个服务器，
+   暴露的是代理服务器的地址，隐藏了目标服务器IP地址
+
+命令：（需要进入/usr/local/nginx/sbin/）
+1. 查看版本 ./nginx -v
+
+配置文件：（/usr/local/nginx/conf/nginx.conf）
+1. 全局块
+   work_processes 1;     
+2. events块
+   work_connections  1024;      值代表支持最大连接数
+3. http块
+   此部分是配置调整最多的部分
+   
+Nginx 高可用的配置
+原理：请求访问一个虚拟IP（非主服务器IP，也非备服务器IP;此虚拟IP用于代表Nginx集群暴露出来的IP），此IP设置在keepalived配置文件里，
+两台服务器均安装有keepalived，一台设置为主，一台设置为备，keepalived里可引入外部脚本，用于检测两台服务器是否活着（正常工作），
+当主服务器宕机，会切换到备服务器处理请求，又因两台服务器都装有Nginx，所以还是能完成转发请求的功能; 相当于Nginx集群
+1. 准备：
+    两台安装Nginx的服务器
+    服务器上都需要安装keepalived; 命令：yum install keepalived -y
+2. keepalived 安装后，默认路径在/etc/keepalived/，配置文件keepalived.conf
+3. 通过修改keepalived.conf 实现主、备服务器的高可用配置
+4. keepalived也需要启动，通过keepalived文件夹里的keepalived.service启动(命令可能是：service start keepalived.service)
+5. 测试：浏览器访问地址：虚拟IP;再停止主服务器，再次访问虚拟IP
+
+Nginx 底层原理
+1. Nginx 在Linux系统开启后，默认会有2个进程mater, worker; ( 因为work_processes 默认为1，所以默认只有1个worker)
+2. Nginx可以有一个master，多个worker
+3. 当有请求发到Nginx，先到master那里，worker以争抢的方式从master得到任务, 如访问非静态资源，以反向代理完成任务
+4. worker数设置为cpu数最为适宜
+5. Nginx 与redis 采用了io多路复用机制，装在Linux系统性能更好，在windows上性能受影响
+6. 普通静态访问最大并发数(支持同时访问请求数)是：work_connections/2*work_processes;
+   如果用到反向代理，则最大并发数是：work_connections/4*work_processes
+
+
