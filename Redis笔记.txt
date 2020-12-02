@@ -1,0 +1,209 @@
+1. 关系型数据库：ACID
+2. Nosql 数据库：
+   CAP(一致性，可用性，分区容错性)
+   BASE(Basically Available基本可用,Soft state软状态,Eventually consistent最终一致)        
+   BASE是针对关系型数据库强一致而引起的可用性下降，提出的解决方案
+3. 分布式
+   不同服务器上部署不同服务模块
+   集群
+   多台服务器上部署相同服务模块
+   
+Redis
+1. 支持数据持久化 （RDB,AOF）
+2. 支持数据类型：string,list,set,zset,hash(适合存储对象)
+3. 数据备份模式：master-slave模式
+
+PS: 单进程模型处理请求; 默认数据库16个，从0—15
+
+PS: Linux系统安装软件前，需要安装gcc; 检查gcc版本: gcc -v
+    安装redis，装完gcc还需要清理一下make distclean 才能安装命令：make
+	安装完成，系统默认安装路径是：/usr/local/
+	
+命令（进入/usr/local/bin/目录）
+1. redis-server redis.conf配置文件的路径       以指定配置文件启动redis服务端
+2. redis-cli -p 6379                           启动redis客户端
+3. shutdown                                    关闭redis
+4. exit                                        退出
+5. select 数字                                 切换数据库
+
+6. exist key的名字                             判断是否存在某个key, 存在返回1，反之0
+7. move key的名字 数据库下标                   把某个key-value 移到其他数据库
+8. expire key的名字 秒                         给key设置过期时间
+9. ttl key的名字                               查看还有多少秒过期，-1表示永不过期，-2表示已经过期
+10.type key的名字                              查看key的类型
+11.set key的名字 value值                       如key已有值，产生覆盖效果
+
+操作string类型数据命令
+1. get、set、del、append、strlen
+2. 当时数字时（例如“5”），incr（递增）、decr（递减）、incrby（加上）、decrby（减小）
+   例如：incrby key1 3                        表示key1的值加3
+3. getrange、setrange                         表示截取、覆盖
+   例如：getrange key1 0 3                    截取key1第一位到第四位字符; getrange key1 0 -1  代表全部字符
+         setrange key1 0 新值 
+4. setex   设置过期时间
+   例如setex key1 秒数 v1
+5. setnx   不存在时才设置值，如已存在不会去覆盖; 返回1代表设置成功，0代表失败
+   例如setnx key1 v1  
+6. mset、mget、msetnx   (m代表多个)
+   例如 mset k1 v1 k2 v2 
+
+操作list类型数据命令
+1. lpush/rpush/lrange                   （rpush+lrange 存取顺序一致;lpush+lrange存取顺序相反）
+   例如：lpush list1 1 2 3 4             存
+         lrange list1 0 -1               全部取
+2. lpop/rpop                             取一个（lpush+lpop倒着取，lpush+rpop顺着取）
+3. lindex                                按索引下标查找
+   例如 lindex list1 2
+4. llen                                  查长度
+5. lrem list1 数字n value                删除list中n个值为value的元素
+6. ltrim list1 index1 index2             截取索引index1到index2之间的元素赋值给原list
+7. rpoplpush  list1 list2                list1取一个元素加入到list2中
+8. lset list1 index value                设置list1中index位置的值为value
+9. linsert list1 before value1 value2    在list1中value1之前插入value2
+10.linsert list1 after value1 value2     在list1中value1之后插入value2
+
+操作set类型数据命令
+1. sadd  
+2. smembers  set1                  查看set1集合
+3. scard  set1                     获取set1元素个数
+4. srem set1 value                 删除set1集合中值为value的元素
+5. srandmembers set1 个数n         随机获取set1中n个元素
+6. spop set1                       随机获取1个元素
+7. smove set1 set2 value 
+8. sdiff set1 set2                 差集，set1中有set2中没有的元素
+9. sinter                          交集
+10.sunion                          并集
+
+操作hash类型数据命令
+hash类型：key-value模式不变，但是value是一个键值对，例如 user id 11是一个hash类型数据
+1. hset,hget,hmset,hmget,hgetall,hdel
+2. hlen
+3. hexist 
+
+配置文件redis.conf
+1. Maxclients
+2. Maxmemory
+3. Maxmemory-policy  缓存策略
+   lru 最近最少使用
+   random 随机
+   ttl 离过期最快
+   noeviction 永不过期（默认）
+4. 日志级别：debug,verbose(默认),notice,warning
+
+Redis持久化
+1. RDB（Redis Database）
+   指定的时间间隔内，将内存快照写入磁盘，恢复时把快照文件读入内存，最后一次持久性数据可能丢失
+   
+   保存触发条件：（默认如下）
+   save  900  1           （900s内，有1次改动）
+   save  300  10
+   save  60   10000  
+   快照文件：dump.rdb 
+
+   如在恢复时，Redis无法正常启动，可能是dump.rdb文件出错，尝试命令修复：redis-check-dump
+   
+2. AOF（Append Only File）
+   以日志形式记录每一个写操作，Redis恢复就可以根据日志文件的内容将写指令从头到尾执行一次
+   此功能默认关闭（appendonly no），开启则改为yes
+   日志文件： appendonly.aof
+   
+   日志保存策略：
+   appendfsync everysec（默认，表示每秒保存）,always,no
+
+   Rewrite
+   AOF采用文件追加方式，文件会越来越大，用重写机制来压缩; 触发时机：文件大小超过设置阈值（默认是当前文件是上次重写后的大小的2倍，
+   且当前文件大于64M时触发），Redis会启动压缩，只保留恢复数据所需的最小指令集
+   
+3. dump.rdb与appendonly.aof同时存在时，Redis恢复默认加载appendonly.aof
+   如在恢复时，Redis无法正常启动，可能是appendonly.aof文件出错（在记录写操作的途中，宕机，造成记录不完整，语句不能执行）
+   可使用命令尝试修复：redis-check-aof --fix appendonly.aof
+   
+4. 由于AOF文件远大于rdb文件，所以运行效率慢
+5. 性能建议：
+   1.只在slave上持久化rdb文件 ，只保留save 900 1即可（作为后备用途）
+   2. 2.1开启AOF时，应尽量减少rewrite次数，调大重写设置阈值（64M）到5G
+      2.2也可以不开启AOF，靠master-slaver replication实现
+	  
+Redis事务（开启->入队->执行 ）
+1. 标记事务开始，用命令：multi，返回OK后，开始输入一系列命令，直到输入exec代表multi与exec之间的操作在一个事务内
+2. 执行事务块内所有命令，用命令：exec
+3. 放弃事务: discard 
+4. 如multi 与exec命令之间的命令返回error,则整个事务失败; 如multi 与exec命令之间的命令有错但成功加入了queue,
+   则正确的命令执行，错误的命令不执行（Redis部分支持事务，与mysql事务不完全一样，不保证原子性，也没有隔离级别概念）
+5. watch监控key
+   先开启watch监控，再开启multi（相当于加乐观锁），如在watch期间，数据被其他人修改并提交，本机exec命令无法成功，需要先unwatch，
+   再重新开启watch监控，开启multi，重来一次
+   一旦exec命令成功，本次watch监控结束
+   
+Redis发布与订阅（pub-sub）
+   实际有专门的工具处理消息的发布与订阅
+   
+Redis的复制（Master-Slave）
+1. Master以写为主，Slave以读为主，读写分离
+   命令：info replication   查看身份信息（未设置前，默认是Master）
+2. 一主多仆
+   设置Slave，命令 slaveof IP 端口（IP 端口:Master的IP 端口，表示成为Master的Slave）
+   从机Slave会获取主机Master所有信息，包括设置Slave之前Master存的数据（刚连接时全量复制，后续增量复制）
+   从机无法写入数据，报错
+   1.主机宕机时，从机待命，仍然维持Slave身份；当主机又恢复了，还会获取Master身份，与Slave联系上
+   2.从机宕机时，再恢复时，会成为Master，除非配置入配置文件才能再恢复时获取从机身份
+   
+3. 薪火相传（A的Slave是B，B的Slave是C）
+   1. B，C都可以获取A中的数据
+   
+4. 反客为主
+   如B,C均是A的Slave，当A宕机，在其中一个Slave中，可使用slaveof no one命令让Slave成为Master，当A恢复时，
+   与使用了slaveof no one命令的机器脱离主从关系
+   
+5. 哨兵模式（反客为主的自动版）
+   后台监控Master是否故障，如故障，则根据投票从Slave中选Master，当选出新Master后，原来的Master恢复过来会被哨兵监控，
+   自动变成新Master的Slave
+   1. 配置
+      touch一个文件，名为sentinel.conf
+	  vim 内容：sentinel monitor Master机器名字 IP 端口 数字n
+                Master机器名字:给Master起一个名字，代表监控的Master
+                数字n：代表如Master宕机，谁的票数多余n则成为新Master
+	  启动sentinel （要进入redis-sentinel所在目录）
+	  命令：redis-sentinel  sentinel.conf文件路径  （选Master有延迟）
+   2. 哨兵缺点
+      有延迟问题
+	  
+
+   
+   
+
+
+
+   
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+   
+   
+    
+
+
+
+
+
+
+
+
+
