@@ -1,0 +1,103 @@
+MQ之ActiveMQ
+1. 作用：削峰，解耦，异步
+
+ActiveMQ
+1. 启动命令：./activemq start （默认以原始配置文件activemq.xml）
+   以指定配置文件启动：./activemq start xbean:file:配置文件路径  
+   
+   启动前需要先有JDK环境，启动命令需先进入activemq命令所在目录
+   activeMQ默认端口：61616; 命令 netstat -anp|grep 61616 查看端口是否被占用，如占用则表示activeMQ启动
+   带运行日志启动命令：./activemq start > 日志路径/日志名.log
+   
+   前台图形化访问端口8161，登录账号、密码都是admin
+   
+2. 消息生产者编码流程：
+   创建连接工厂->创建连接->创建会话->创建目的地->创建消息生产者->创建消息->发送消息->关闭资源
+   消息消费者编码流程：
+   创建连接工厂->创建连接->创建会话->创建目的地->创建消息消费者->接收消息->关闭资源
+   
+   接收消息：设置消息监听器，通过监听方式来接收消息(消费者不用手动启动，生产者启动时，消费者因监听器能接受消息)
+   
+   目的地：Queue或者Topic 
+   
+3. 消息结构
+   1. 消息头 （JMSDestination,JMSDliveryMode,JMSExpiration,JMSPriority,JMSMessageID） 
+   2. 消息体 （TextMessage,MapMessage,BytesMessage,StreamMessage,ObjectMessage）
+   3. 属性   （对消息设置一个进一步标识，用于筛选，例如：StringProperty）
+   
+4. 消息的可靠性
+   1. Queue持久性 （默认是持久化）
+      设置非持久化：消息生产者.setDliveryMode(DliveryMode.NON_PERSISTENT)      MQ宕机则消息丢失
+      设置持久化：消息生产者.setDliveryMode(DliveryMode.PERSISTENT)            MQ宕机再恢复时消息也恢复
+      Topic持久性
+	  Topic中消息的持久性设置与Queue不一样，需要在 消息消费者编码流程 中做改动（创建消息消费者改为 创建持久订阅者）
+	  如果是非持久订阅状态：只有消费者与MQ保持连接状态才能接受某主题消息，如消费者离线，生产者生产的消息会丢失
+   2. 事务 （偏生产者）
+      如开启了事务（connection.createSession(true,Session.AUTO_ACKNOWLEDGE)），需手动提交session.commit()
+	  事务开启时，配合try-catch-finally 事务回滚 session.rollback()
+   3. 签收 ACKNOWLEDGE （偏消费者）
+      签收模式：
+	  自动签收 AUTO_ACKNOWLEDGE（默认）
+	
+	  手动签收CLIENT_ACKNOWLEDGE: 当开启手动签收，需要有如下动作： 消息.acknowledge()
+   4. 事务级别高于签收，当事务开启时，签收不重要了;当事务没开启，可以考虑开启签收的不同模式
+   
+5. broker
+   相当于一个ActiveMQ服务器实例
+   在java代码中使用broker，相当于启动MQ服务器了
+   
+6. Spring整合ActiveMQ
+   1. applicationContext.xml 中用<bean>注入 1.连接工厂，2.目的地，3.jmsTemplate
+   
+7. Springboot整合ActiveMQ
+   1. 生产者间隔定投 用@Scheduled(fixedDelay=)
+   2. 只启动类需要开启jms,scheduled  用@EnableJms  @EnableScheduling
+   
+8. ActiveMQ传输协议
+   1. TCP（默认） , NIO（实际生产上使用，TCP的优化版）...
+   2. 开启NIO协议，需在配置文件activemq.xml里增加NIO配置
+   3. NIO加强：自动适配协议，实现支持多协议
+      开启NIO加强（AUTO+NIO），需在配置文件activemq.xml里增加AUTO+NIO配置
+	  
+9. ActiveMQ消息存储与持久化
+   1. 此处持久化强调的是，消息持久化到MQ之外的机器上
+   2. 持久化机制主要：KahaDB（默认）、JDBC、LevelDB 
+	  KahaDB消息存储：基于日志文件
+	          存储在ActiveMQ 安装路径下的/data/kahaDB/文件下（文件下有4个文件和一个lock，
+			  其中db-1.log存储数据，db.data存B-Tree索引，db.redo用来消息恢复，db.free记录db.data里所有空闲页的ID）
+	  JDBC消息存储：（存储到数据库上,此时需要开启持久化DliveryMode.PERSISTENT）
+	          1.在ActiveMQ 安装路径下的lib/文件夹中添加mysql-jdbc驱动的jar包，连接池jar包（如用dbcp，可以省，因为这个它自带了）
+			  2.activemq.xml里配置JDBC持久化（kahaDB换成 Mysql）,其中需要设置属性：createTablesOnStartup=
+			  （默认为true,表示启动MQ时，在Mysql上创建表;一般第一次启动过后，第二次启动就设置为false）
+			  3.activemq.xml里配置数据连接池
+			    当ActiveMQ启动，数据库会自动建3张表：消息，签收，lock
+	  JDBC with journal：带高速缓存的JDBC（JDBC消息存储的增强版）
+	          每次有消息过来，JDBC消息存储方式会有读库，写库; JDBC with journal方式借助高速缓存能提高性能
+			  1. activemq.xml里配置JDBC with journal
+			  
+10. ActiveMQ高级特性
+    消息投递模式：
+    1. 异步投递
+	   在创建ActiveMQ连接工厂时，构造器里设置开启（默认）异步投递
+	   不能保证消息发送成功，消息可能会丢失（如MQ宕机，生产者内存中尚未发送至MQ的消息会丢失，故需要接收回调） 
+	   当没开启事务，却设置了持久化发送消息，投递模式会自动改为同步
+	2. 延迟&定时投递 
+       activemq.xml里的broker里配置SchedulerSupport=true
+	   属性：Delay 延迟投递的时间，PERIOD投递时间间隔，REPEAT重复投递的次数
+	   message.setLongProperty(属性)/message.setIntProperty(属性)
+	消息重试机制
+	   1. 默认最大重发次数：6次; 默认重发延迟时间：1s    
+	   如果重发消息超过6次，不会在消费，消息进入死信队列	
+	死信队列 DLQ
+	   用于处理失败的消息
+	
+			  
+			
+			  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
