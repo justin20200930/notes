@@ -1,0 +1,44 @@
+Linux系统：
+1.关于/etc/hosts，主机名和IP映射配置文件
+作用：
+在Internet，每台主机都有一个IP地址，它区分开每台主机，并可以根据ip进行通讯。但IP地址不方便记忆，所以又有了域名;
+在一个局域网中，每台机器都有一个主机名，用于区分主机，便于相互访问;
+Linux主机名的相关配置文件就是/etc/hosts;这个文件告诉本主机哪些域名对应那些ip，那些主机名对应哪些ip;
+   
+2. MySQL Linux版 rpm 是否安装过，用rpm -qa|grep -i mysql 无结果则系统未安装
+   卸载用rpm -e 软件名 或者强制卸载rpm -e --nodeps 软件名（当存在依赖关系时默认会阻止卸载）
+   安装用rpm -ivh 软件名
+
+3.rpm与yum
+  1. rpm下载的安装包以及系统默认自带的包都在/media/CentOS_6.8_Final/Packages
+  2. rpm -ivh 包名         安装
+  3. yum是基于RPM包的管理，能从指定服务器上下载RPM包并且安装，可以自动处理依赖性关系，一次安装所有依赖的软件包
+  4. 查询服务器上是否有某一软件包    yum list |grep 软件名
+  5. 安装指定的包   yum install 软件名
+  6. 查询目录下某个名字的软件或文件    ls -l 软件名
+
+4. 防火墙开放某个端口
+  vim /etc/sysconfig/iptables 里配置
+5. 查看防火墙开放端口信息
+  service iptables status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
